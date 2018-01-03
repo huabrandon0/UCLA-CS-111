@@ -1,0 +1,29 @@
+NAME: Brandon Hua
+EMAIL: huabrandon0@gmail.com
+ID: 804595738
+README
+
+lab1a.c:
+lab1a.c is the source code of the lab1a program. As stated in the Lab 1
+Specifications, when run without the --shell option, it reads input
+from the keyboard into a buffer. The received characters are written back
+out to the display. Upon detecting the escape sequence (^D), the program
+exits. When run with the --shell option, it forks and executes a shell.
+The keyboard input is piped to the shell process's stdin, and the shell's
+stdout and stderr are piped to the terminal process, which writes
+them out to the display. Essentially, this is a pseudo-shell program.
+By default, the program will exit with code 0. In cases of unrecognized
+arguments or system call failure, the program with exit with code 1.
+
+Makefile:
+Makefile is the makefile of the lab1a program. It supports the following
+targets:
+   default
+      build the lab1a executable
+   clean
+      delete all makefile-created files
+   dist
+      build the distribution tarball
+
+README:
+README describes the submission files.

@@ -1,0 +1,22 @@
+NAME: Brandon Hua
+EMAIL: huabrandon0@gmail.com
+ID: 804595738
+
+README for Project 3B
+
+lab3b.py:
+A python script that analyzes a given file system summary. It reports
+detected inconsistencies in the file system summary.
+
+lab3b:
+The shell script that runs lab3b.py. This script is used in place of
+an executable.
+
+Makefile:
+The Makefile of the lab3b program. Supported targets include the following:
+	default - gives executable permissions to lab3b.py and lab3b
+	dist - creates the deliverable tarball
+	clean - deletes all Makefile-generated programs and output
+	
+README:
+This describes each of the included files.

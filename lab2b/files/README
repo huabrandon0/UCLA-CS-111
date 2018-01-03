@@ -1,0 +1,117 @@
+NAME: Brandon Hua
+EMAIL: huabrandon0@gmail.com
+ID: 804595738
+README for Project 2B
+
+Usage of slip days: 1
+
+SortedList.h:
+	header file describing the interfaces for linked list operations.
+
+SortedList.c:
+	implementations of the interfaces described by SortedList.h.
+
+lab2_list.c:
+	source code for the lab2_list program
+	
+Makefile
+	builds the programs, output, graphs, and tarball
+	supported targets include default, tests, profile, graphs, dist, clean
+	
+lab2b_list.csv
+	results of all the test runs
+
+profile.out
+	execution profiling report showing where time was spent in the un-partitioned
+	spin-lock implementation
+	
+graphs
+	lab2b_1.png (throughput for unpartitioned mutex/spinlock-protected list ops)
+	lab2b_2.png (time per wait vs time per op)
+	lab2b_3.png (successful iterations vs threads)
+	lab2b_4.png (throughput for partitioned mutex-protected list ops)
+	lab2b_5.png (throughput for partitioned spinlock-protected list ops)
+	
+lab2b_list.gp
+	gnuplot script that generates the graphs listed above
+
+README
+	describes submission files and answers lab questions
+	
+QUESTION 2.3.1
+Most of the cycles for the 1- and 2-thread list tests are spent in the code
+of the critical sections--the list operations. These are the most expensive
+parts of the code because there is less lock contention with a low amount of
+threads, so there is less time spent waiting for locks.
+
+For high-thread spinlock tests, most of the time/cycles are spent waiting
+(spinning and wasting cycles) for locks to be free.
+
+For high-thread mutex tests, most of the time/cycles are spent doing context
+switches between threads.
+
+QUESTION 2.3.2
+According to the profile.out file I generated, most samples come from
+the routine "spinlock_lock", where it spins until it is able to retrieve
+the unlocked lock:
+
+void spinlock_lock(spinlock_t *lock)
+{
+  while (__sync_lock_test_and_set(&lock->flag, 1) == 1)
+    ;
+}
+
+This spinning becomes expensive with large numbers of threads because
+there is more lock contention that comes with more threads, meaning
+spinning happens more often and wastes more CPU cycles.
+
+QUESTION 2.3.3
+The average lock-wait time rises so dramatically with the number of
+contending threads because more threads means more lock contention.
+So, it's more likely for a thread to be waiting on a lock to be free
+because there are more threads wanting the same lock.
+
+Completion time per operation rises with the number of contending threads
+because completion time is composed of lock-wait time and the time it takes
+to perform the operations. It rises less dramatically because the average
+time it takes to perform a specific list operation is relatively constant,
+meaning the increase in average lock-wait time has less impact on the
+overall value of completion time per operation.
+
+Wait time per operation can be higher than the completion time per operation
+because wait time is computed to be the sum of all threads' wait times,
+whereas completion time is the time it takes for all the threads (running
+in parallel) to complete. So, wait time can exceed completion time if the
+sum of the wait times of each thread is larger than the time it takes for all
+the threads to complete.
+
+QUESTION 2.3.4
+The performance/throughput increases with the number of lists. This happens
+because there is finer-grained locking with more lists, meaning less lock
+contention in general and therefore more work being done at a given moment.
+
+The throughput should continue increasing as the number of lists is further
+increased but with diminishing returns. Because the number of threads that
+are running in parallel is limited, the effect of increasing the number of
+lists becomes less impactful on performance. Eventually, the threads will
+not be able to squeeze out any more throughput with more lists because the
+possibility of lock contention is already very low.
+
+The suggestion that a N-way partitioned list's throughput should be
+equivalent to a single list with (1/N) times the number of threads does
+not seem to be the case in lab2b_4.png and lab2b_5.png. We find the
+following throughput at (# lists, # threads) on the graphs, and calculate the
+ratio of its throughput against its corresponding throughput at
+(1 list, #/N threads):
+
+lab2b_4.png (mutex):
+	4 lists/8 threads ~ 1*10^6; 1 list/2 threads ~ 2*10^5. TP ratio is 5:1.
+lab2b_5.png (spinlock):
+	4 lists/8 threads ~ 4*10^5; 1 list/2 threads ~ 1.5*10^5. TP ratio is 8:3.
+
+Note: this data was taken from previously compiled PNGs, which will be
+redone when "make dist" is ran, so these observations may not hold later on.
+	
+The trend does not hold since the throughput ratios are not 1:1. In fact,
+the throughput generally is greater for the multi-list runs. This is expected
+because more lists mean less lock contention and therefore greater throughput.

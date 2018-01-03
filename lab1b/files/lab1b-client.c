@@ -1,0 +1,426 @@
+/* NAME: Brandon Hua */
+/* EMAIL: huabrandon0@gmail.com */
+/* ID: 804595738 */
+/* lab1b-client.c */
+
+#include <sys/socket.h> //socket
+#include <sys/types.h> //socket
+#include <netdb.h> //gethostbyname
+#include <errno.h> //errno
+#include <string.h> //strerror
+#include <unistd.h> //_exit, getopt, termios
+#include <stdio.h> //fprintf
+#include <getopt.h> //getopt_long
+#include <termios.h> //termios
+#include <stdlib.h> //malloc, free, atoi
+#include <poll.h> //poll
+#include <mcrypt.h> //mcrypt
+#include <sys/stat.h> //stat, open
+#include <fcntl.h> //stat, open
+
+#define EXIT_OK 0
+#define EXIT_SYSCALL_ERR 1
+#define EXIT_UNRECOGNIZED_ARG 1
+#define EXIT_NO_OPT_PORT 1
+
+struct option long_opts[] = {
+  {"port", required_argument, NULL, 'p'},
+  {"encrypt", required_argument, NULL, 'e'},
+  {"log", required_argument, NULL, 'l'}
+};
+
+const unsigned int NUM_BYTES = 128;
+char *char_buf = NULL;
+const char *LF = "\n";
+const char *CRLF = "\r\n";
+
+//Terminal mode stuff.
+struct termios t_orig;
+
+//Socket stuff.
+int sockfd = 0;
+int opt_port = 0;
+int port_num = 0;
+
+//Encrypt stuff.
+int opt_encrypt = 0;
+MCRYPT td, td2;
+char *key_file = NULL;
+char *key = NULL;
+int key_len = 0;
+char *IV = "AAAAAAAAAAAAAAAA";
+char *char_buf_enc = NULL;
+char *char_buf_dec = NULL;
+
+//Log stuff.
+int opt_log = 0;
+char *log_file = NULL;
+int logfd = 0;
+
+void check_err_int(const char *type, const int rc);
+void check_err_ptr(const char *type, const void *rp);
+void print_usage(const char *exec_name);
+void restore_exit(const int ec);
+void socket_setup();
+void loop_port();
+void proc_fromkb(const char input);
+void proc_fromserv(const char input);
+void mcrypt_setup();
+void mcrypt_shutdown();
+
+ssize_t wrapped_read(int fd, void *buf, size_t count);
+ssize_t wrapped_write(int fd, const void *buf, size_t count);
+ssize_t wrapped_write_to_log(const void *buf, size_t count, const char *prefix);
+  
+int main(int argc, char *argv[])
+{
+  //Parse options.
+  int opt;
+  while ((opt = getopt_long(argc, argv, "", long_opts, NULL)) != -1)
+    {
+      switch(opt)
+	{
+	case 'e':
+	  opt_encrypt = 1;
+	  key_file = optarg;
+	  break;
+	case 'l':
+	  opt_log = 1;
+	  log_file = optarg;
+	  break;
+	case 'p':
+	  opt_port = 1;
+	  port_num = atoi(optarg);
+	  break;
+	default:
+	  print_usage(argv[0]);
+	  _exit(EXIT_UNRECOGNIZED_ARG);
+	}
+    }
+  
+  //Change terminal modes.
+  check_err_int("tcgetattr", tcgetattr(0, &t_orig));
+
+  struct termios t_new = t_orig;
+  t_new.c_iflag = ISTRIP;
+  t_new.c_oflag = 0;
+  t_new.c_lflag = 0;
+  check_err_int("tcsettattr", (tcsetattr(0, TCSANOW, &t_new)));
+
+  //Allocate memory for character buffer.
+  char_buf = (char*)malloc(NUM_BYTES * sizeof(char));
+    
+  //"--port" option protocol.
+  if (opt_port)
+    {
+      //Set up socket.
+      socket_setup();
+
+      //"--encrypt" option protocol.
+      if (opt_encrypt)
+	{
+	  //Set up mcrypt.
+	  mcrypt_setup();
+
+	  //Allocate memory for encrypted character buffers.
+	  char_buf_enc = (char*)malloc(NUM_BYTES * sizeof(char));
+	  char_buf_dec = (char*)malloc(NUM_BYTES * sizeof(char));
+	}
+
+      if (opt_log)
+	{
+	  logfd = creat(log_file, 0666);
+	  check_err_int("creat", logfd);
+	}
+      
+      loop_port();
+    }
+  else
+    restore_exit(EXIT_NO_OPT_PORT);
+		
+  restore_exit(EXIT_OK);
+}
+
+void check_err_int(const char *type, const int rc)
+{
+  if (rc == -1)
+    {
+      fprintf(stderr, "Failed %s: %s\r\n", type, strerror(errno));
+      restore_exit(EXIT_SYSCALL_ERR);
+    }
+  return;
+}
+
+void check_err_ptr(const char *type, const void *rp)
+{
+  if (rp == NULL)
+   {
+      fprintf(stderr, "Failed %s: %s\r\n", type, strerror(errno));
+      restore_exit(EXIT_SYSCALL_ERR);
+    }
+  return;
+}
+
+void print_usage(const char *exec_name)
+{
+  fprintf(stderr, "Usage: %s [--port=port#] [--encrypt=keyfile]\n", exec_name);
+}
+
+void restore_exit(const int ec)
+{ 
+  free(char_buf);
+  check_err_int("tcsetattr", tcsetattr(0, TCSANOW, &t_orig));
+
+  if (opt_encrypt)
+    {
+      free(key);
+      free(char_buf_enc);
+      free(char_buf_dec);
+      mcrypt_shutdown();
+    }
+  
+  _exit(ec);
+}
+
+void socket_setup()
+{
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  check_err_int("socket", sockfd);
+
+  struct sockaddr_in server_address;
+  struct hostent *server_name = gethostbyname("localhost");
+  check_err_ptr("gethostbyname", server_name);
+
+  bzero((char*)&server_address, sizeof(server_address));
+  bcopy((char*)server_name->h_addr,
+	(char*)&server_address.sin_addr.s_addr,
+	server_name->h_length);
+
+  server_address.sin_family = AF_INET;
+  server_address.sin_port = htons(port_num);
+
+  check_err_int("connect", connect(sockfd,
+				   (struct sockaddr*)&server_address,
+				   sizeof(server_address)));
+}
+
+void loop_port()
+{
+  struct pollfd fds[2];
+  
+  //Keyboard input.
+  fds[0].fd = STDIN_FILENO;
+  fds[0].events = POLLIN | POLLHUP | POLLERR;
+
+  //Server output.
+  fds[1].fd = sockfd;
+  fds[1].events = POLLIN | POLLHUP | POLLERR;
+  
+  int poll_ret;
+  ssize_t nbytes;
+  int i;
+  for(;;)
+    {
+      poll_ret = poll(fds, 2, 0);
+      check_err_int("poll", poll_ret);
+      
+      if (poll_ret > 0) {
+	//Keyboard input POLLIN event.
+	if (fds[0].revents & POLLIN)
+	  {
+	    nbytes = wrapped_read(STDIN_FILENO, char_buf, NUM_BYTES);
+	    
+	    for (i = 0; i < nbytes; i++)
+	      proc_fromkb(char_buf[i]);
+	  }
+
+	//Server output POLLIN event.
+	if (fds[1].revents & POLLIN)
+	  {
+	    nbytes = wrapped_read(sockfd, char_buf, NUM_BYTES);
+	    
+	    for (i = 0; i < nbytes; i++)
+	      proc_fromserv(char_buf[i]);
+	  }
+
+	//Error events.
+        if (fds[1].revents & (POLLHUP | POLLERR))
+	  {
+	    restore_exit(0);
+	  }
+      }
+    }
+}
+
+void proc_fromkb(const char input)
+{
+  if(opt_encrypt)
+    {
+      switch(input)
+  	{
+  	case '\r':
+  	case '\n':
+	  //Echo to display.
+  	  wrapped_write(STDOUT_FILENO, CRLF, 2);
+
+	  //Copy in character to encrypt.
+  	  strncpy(char_buf_enc, LF, 1);
+  	  break;
+  	default:
+	  //Echo to display.
+	  wrapped_write(STDOUT_FILENO, &input, 1);
+
+	  //Copy in character to encrypt.
+	  strncpy(char_buf_enc, &input, 1);
+	  break;
+  	}
+
+      //Encrypt character and send to server.
+      mcrypt_generic(td, char_buf_enc, 1);
+      wrapped_write(sockfd, char_buf_enc, 1);
+
+      //Write to log.
+      if (opt_log)
+	wrapped_write_to_log(char_buf_enc, 1, "SENT");
+      return;
+    }
+  else
+    {
+      switch(input)
+	{
+	case '\r':
+	case '\n':
+	  wrapped_write(STDOUT_FILENO, CRLF, 2);
+	  wrapped_write(sockfd, LF, 1);
+	  return;
+	default:
+	  wrapped_write(STDOUT_FILENO, &input, 1);
+	  wrapped_write(sockfd, &input, 1);
+	  return;
+	}
+    }
+}
+
+void proc_fromserv(const char input)
+{
+  if (opt_encrypt)
+    { 
+      strncpy(char_buf_dec, &input, 1);
+      
+      //Write to log before decrypted.
+      if (opt_log)
+	wrapped_write_to_log(char_buf_dec, 1, "RECEIVED");
+      
+      mdecrypt_generic(td2, char_buf_dec, 1);
+      
+      switch(*char_buf_dec)
+	{
+	case '\n':
+	  wrapped_write(STDOUT_FILENO, CRLF, 2);
+	  return;
+	default:
+	  wrapped_write(STDOUT_FILENO, char_buf_dec, 1);
+	  return;
+	}
+    }
+  else
+    {
+      switch(input)
+	{
+	case '\n':
+	  wrapped_write(STDOUT_FILENO, CRLF, 2);
+	  return;
+	default:
+	  wrapped_write(STDOUT_FILENO, &input, 1);
+	  return;
+	}
+    }
+}
+
+void mcrypt_setup()
+{
+  int key_fd;
+
+  //Getting the key.
+  struct stat keyfile_st;
+  check_err_int("stat", stat(key_file, &keyfile_st));
+  key_len = keyfile_st.st_size;
+
+  key_fd = open(key_file, O_RDONLY);
+  check_err_int("open", key_fd);
+
+  key = (char*)malloc(key_len * sizeof(char));
+  wrapped_read(key_fd, key, key_len);
+
+  //fprintf(stderr, "key is %s. len is %d\r\n", key, key_len);
+  
+  //Setting up the mcrypt module for encryption.
+  td = mcrypt_module_open("twofish", NULL, "cfb", NULL);
+  if (td == MCRYPT_FAILED)
+    {
+      fprintf(stderr, "Failed mcrypt_module_open: %s\n", strerror(errno));
+      restore_exit(EXIT_SYSCALL_ERR);
+    }
+
+  //Setting up the mcrypt module for decryption.
+  td2 = mcrypt_module_open("twofish", NULL, "cfb", NULL);
+  if (td2 == MCRYPT_FAILED)
+    {
+      fprintf(stderr, "Failed mcrypt_module_open: %s\n", strerror(errno));
+      restore_exit(EXIT_SYSCALL_ERR);
+    }
+  
+  //Initializing both modules.
+  if (mcrypt_generic_init(td, key, key_len, IV) < 0)
+    {
+      fprintf(stderr, "Failed mcrypt_generic_init: %s\n", strerror(errno));
+      restore_exit(EXIT_SYSCALL_ERR);
+    }
+
+  if (mcrypt_generic_init(td2, key, key_len, IV) < 0)
+    {
+      fprintf(stderr, "Failed mcrypt_generic_init: %s\n", strerror(errno));
+      restore_exit(EXIT_SYSCALL_ERR);
+    }  
+}
+
+void mcrypt_shutdown()
+{
+  mcrypt_generic_deinit(td);
+  mcrypt_module_close(td);
+  mcrypt_generic_deinit(td2);
+  mcrypt_module_close(td2);
+}
+
+//Wrapper for read(2).
+ssize_t wrapped_read(int fd, void *buf, size_t count)
+{
+  ssize_t nbytes = read(fd, buf, count);
+  check_err_int("read", nbytes);
+  return nbytes;
+}
+
+//Wrapper for write(2).
+ssize_t wrapped_write(int fd, const void *buf, size_t count)
+{
+  ssize_t nbytes = write(fd, buf, count);
+  check_err_int("write", nbytes);
+  return nbytes;
+}
+
+//Write to log buf with prefix and number of bytes.
+ssize_t wrapped_write_to_log(const void *buf, size_t count, const char *prefix)
+{
+  char str[256] = "";
+  char num_bytes[10] = "";
+  sprintf(num_bytes, "%d", (int)count);
+  
+  strncpy(str, prefix, strnlen(prefix, 128));
+  strncat(str, " ", 1);
+  strncat(str, num_bytes, strnlen(num_bytes, 10));
+  strncat(str, " bytes: ", 8);
+  strncat(str, (char*)buf, count);
+  strncat(str, "\n", 1);
+  
+  check_err_int("write", write(logfd, str, strnlen(str, 128)));
+}

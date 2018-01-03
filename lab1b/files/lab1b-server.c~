@@ -1,0 +1,308 @@
+/* NAME: Brandon Hua */
+/* EMAIL: huabrandon0@gmail.com */
+/* ID: 804595738 */
+/* lab1b-server.c */
+
+#include <sys/socket.h> //socket
+#include <termios.h> //termios
+#include <unistd.h> //termios, read, getopt, pipe, _exit
+#include <stdlib.h> //malloc
+#include <getopt.h> //getopt_long
+#include <stdio.h> //fprintf
+#include <poll.h> //poll
+#include <sys/types.h> //kill, waitpid, socket, kill
+#include <signal.h> //kill, signal, kill
+#include <errno.h> //errno
+#include <string.h> //strerror
+#include <sys/wait.h> //waitpid
+#include <netinet/in.h> //structures and constants for socket
+
+#define EXIT_OK 0
+#define EXIT_SYSCALL_ERR 1
+#define EXIT_UNRECOGNIZED_ARG 1
+#define EXIT_NO_OPT_PORT 1
+
+struct option long_opts[] = {
+  {"port", required_argument, NULL, 'p'},
+  {"encrypt", required_argument, NULL, 'e'}
+};
+
+const unsigned int NUM_BYTES = 128;
+char *char_buf = NULL;
+const char *CRLF = "\r\n";
+
+int listenfd;
+int fromfd;
+
+int towards_shell[2];
+int from_shell[2];
+pid_t pid_sh;
+
+int opt_encrypt = 0;
+
+void check_err_int(const char *type, const int rc);
+void check_err_ptr(const char *type, const void *rp);
+void print_usage(const char *exec_name);
+void signal_handler(int signo);
+void close_fds();
+void wait_print_sh();
+void restore_exit(const int ec);
+void loop_port();
+void proc_fromcli(const char input);
+void proc_fromsh(const char input);
+
+int main(int argc, char *argv[])
+{
+  //Parse options.
+  int opt_port = 0;
+  int port_num;
+  char *encrypt_file;
+  int opt;
+  while ((opt = getopt_long(argc, argv, "", long_opts, NULL)) != -1)
+  {
+    switch(opt)
+      {
+      case 'e':
+	opt_encrypt = 1;
+	encrypt_file = optarg;
+      case 'p':
+	opt_port = 1;
+        port_num = atoi(optarg);
+	break;
+      default:
+	print_usage(argv[0]);
+	_exit(EXIT_UNRECOGNIZED_ARG);
+      }
+  }
+
+  //Allocate memory for buffer.
+  char_buf = (char*)malloc(NUM_BYTES * sizeof(char));
+    
+  //"--port" option protocol.
+  if (opt_port)
+    {
+      //Set up socket.
+      struct sockaddr_in server_address;
+      struct sockaddr_in client_address;
+
+      listenfd = socket(AF_INET, SOCK_STREAM, 0);
+      check_err_int("socket", listenfd);
+      
+      server_address.sin_family = AF_INET;
+      server_address.sin_addr.s_addr = INADDR_ANY;
+      server_address.sin_port = htons(port_num);
+
+      check_err_int("bind", bind(listenfd,
+				 (struct sockaddr*)&server_address,
+				 sizeof(server_address)));
+      check_err_int("listen", listen(listenfd, 5));
+      unsigned cli_len = sizeof(client_address);
+      fromfd = accept(listenfd,
+		      (struct sockaddr*)&client_address,
+		      &cli_len);
+      check_err_int("accept", fromfd);
+
+      dup2(fromfd, STDIN_FILENO);
+      dup2(fromfd, STDOUT_FILENO);
+      close(fromfd);
+
+      //Catch signal SIGPIPE.
+      signal(SIGPIPE, signal_handler);
+      
+      //Create child process running bash.
+      //Connect the parent to the child with pipes.
+      pipe(towards_shell);
+      pipe(from_shell);
+      
+      pid_sh = fork();
+      check_err_int("fork", pid_sh);
+      
+      if (pid_sh == 0)
+	{
+	  //Child process.
+	  close(towards_shell[1]);
+	  dup2(towards_shell[0], STDIN_FILENO);
+
+	  close(from_shell[0]);
+	  dup2(from_shell[1], STDOUT_FILENO);
+	  dup2(from_shell[1], STDERR_FILENO);
+	  
+	  char *sh_args[2];
+	  sh_args[0] = "bash";
+	  sh_args[1] = NULL;
+	  execvp("/bin/bash", sh_args);
+	}
+      else
+	{
+	  //Parent process.
+	  close(towards_shell[0]);
+	  close(from_shell[1]);
+	}
+
+      loop_port();
+    }
+  else
+    restore_exit(EXIT_NO_OPT_PORT);
+		
+  restore_exit(EXIT_OK);
+}
+
+void check_err_int(const char *type, const int rc)
+{
+  if (rc == -1)
+    {
+      fprintf(stderr, "Failed %s: %s\n", type, strerror(errno));
+      restore_exit(EXIT_SYSCALL_ERR);
+    }
+  return;
+}
+
+void check_err_ptr(const char *type, const void *rp)
+{
+  if (rp == NULL)
+   {
+      fprintf(stderr, "Failed %s: %s\n", type, strerror(errno));
+      restore_exit(EXIT_SYSCALL_ERR);
+    }
+  return;
+}
+
+void print_usage(const char *exec_name)
+{
+  fprintf(stderr, "Usage: %s [--port=port#]\n", exec_name);
+}
+
+void signal_handler (int signo) {
+  if (signo == SIGPIPE)
+    {
+      restore_exit(EXIT_OK);
+    }
+}
+
+
+void close_fds()
+{
+  close(STDIN_FILENO);
+  close(STDOUT_FILENO);
+  close(listenfd);
+  close(towards_shell[1]);
+  close(from_shell[0]);
+}
+
+void wait_print_sh()
+{
+  int status_sh;
+  waitpid(pid_sh, &status_sh, 0);
+  int status_sh_low = status_sh & 0x007f;
+  int status_sh_high = (status_sh >> 8) & 0x00ff;
+  
+  fprintf(stderr, "SHELL EXIT SIGNAL=%d STATUS=%d\n",
+	  status_sh_low, status_sh_high);
+  return;
+}
+
+void restore_exit(const int ec)
+{ 
+  free(char_buf);
+  close_fds();
+  wait_print_sh();
+  
+  close(STDOUT_FILENO);
+  close(STDIN_FILENO);
+  
+  _exit(ec);
+}
+
+void loop_port()
+{
+  struct pollfd fds[2];
+
+  //Client input.
+  fds[0].fd = STDIN_FILENO;
+  fds[0].events = POLLIN | POLLHUP | POLLERR;
+
+  //Shell output.
+  fds[1].fd = from_shell[0];
+  fds[1].events = POLLIN | POLLHUP | POLLERR;
+  
+  int poll_ret;
+  int i;
+  ssize_t nbytes;
+  
+  for(;;)
+    {
+      poll_ret = poll(fds, 2, 0);
+      check_err_int("poll", poll_ret);
+      
+      if (poll_ret > 0) {
+	//Client input POLLIN event.
+	if (fds[0].revents & POLLIN)
+	  {
+	    nbytes = read(STDIN_FILENO, char_buf, NUM_BYTES);
+	    check_err_int("read", nbytes);
+
+	    //EOF from client.
+	    if (nbytes == 0)
+	      kill(pid_sh, SIGTERM);
+	    
+	    for (i = 0; i < nbytes; i++)
+		proc_fromcli(char_buf[i]);
+	  }
+
+	//Shell output POLLIN event.
+	if (fds[1].revents & POLLIN)
+	  {
+	    nbytes = read(from_shell[0], char_buf, NUM_BYTES);
+	    check_err_int("read", nbytes);
+
+	    //EOF from shell.
+	    if (nbytes == 0)
+	      restore_exit(0);
+	    
+	    for (i = 0; i < nbytes; i++)
+	        proc_fromsh(char_buf[i]);
+	  }
+
+	//Error events.
+        if (fds[1].revents & (POLLHUP | POLLERR))
+	  {
+	    restore_exit(EXIT_OK);
+	  }
+      }
+   }
+
+  return;
+}
+
+void proc_fromcli(const char input)
+{ 
+  switch (input)
+    {
+    case 0x03:
+      kill(pid_sh, SIGINT);
+      return;
+    case 0x04:
+      close(towards_shell[1]);
+      return;
+    default:
+      check_err_int("write", write(towards_shell[1], &input, 1));
+      return;
+    }
+}
+
+void proc_fromsh(const char input)
+{
+  switch (input)
+    {
+    case 0x04:
+      fprintf(stderr, "aylmao came back from the sh yoo\n");
+      restore_exit(0);
+      return;
+    case '\n':
+      check_err_int("write", write(STDOUT_FILENO, CRLF, 2));
+      return;
+    default:
+      check_err_int("write", write(STDOUT_FILENO, &input, 1));
+      return;
+    }
+}

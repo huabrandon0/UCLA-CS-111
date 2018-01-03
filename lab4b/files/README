@@ -1,0 +1,31 @@
+NAME: Brandon Hua
+EMAIL: huabrandon0@gmail.com
+ID: 804595738
+README for Project 4B
+
+lab4b.c:
+	This is the source code of the lab4b program. The program is intended to
+	be ran on an Intel Edison with a Grove temperature sensor and button 
+	connected to A0 and D3 pins respectively. It takes samples of the
+	ambient temperature by reading the sensor value at specified intervals.
+
+Makefile:
+	This is the Makefile of the lab4b program. Supported targets include:
+		default: builds the program
+		check: executes a smoke-test of the program
+		clean: deletes all Makefile-generated files
+		dist: creates the deliverable tarball
+
+lab4b_smoketest.sh:
+	This is the bash script used to test the lab4b program in "make check"
+		
+README
+	This describes the included files and the testing methodology.
+	
+Testing methodology
+	The "make check" testing checks the lab4b program for the following:
+		all options and commands are accepted
+		each command is appropriately logged
+		SHUTDOWN is appropriately logged
+		bad options are caught
+		

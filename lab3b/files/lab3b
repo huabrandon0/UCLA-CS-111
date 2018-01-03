@@ -1,0 +1,4 @@
+#! /bin/sh
+
+export PATH=/usr/local/cs/bin:$PATH
+python3 ./lab3b.py $1

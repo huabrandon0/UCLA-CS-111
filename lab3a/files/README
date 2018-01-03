@@ -1,0 +1,23 @@
+NAME: Brandon Hua, Ryan Ohara
+EMAIL: huabrandon0@gmail.com, ryanohara@g.ucla.edu
+ID: 804595738, 404846404
+
+README for Project 3A
+
+lab3a.c:
+The source code of the lab3a program. The program analyzes an EXT2 file system
+image and outputs a summary to six csv files, describing the super block,
+groups, free-lists, inodes, indirect blocks, and directories.
+
+ext2_fs.h:
+A simplified version of the Linux header file that defines the format of the
+EXT2 file system. Provided in the Project 3A specifications.
+
+Makefile:
+The Makefile of the lab3a program. Supported targets include the following:
+	default - compiles the program and produces an executable named lab3a
+	dist - creates the deliverable tarball
+	clean - deletes all Makefile-generated programs and output
+	
+README:
+This describes each of the included files.

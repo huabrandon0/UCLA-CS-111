@@ -1,0 +1,14 @@
+install gerperftools piazza inst
+google-pprof find out where it spending the most time
+array of list heads
+      SortedList_insert(&listhead[listno], e);
+      where e is the element you want to insert
+
+      each list head has a mutex, in an array of corresponding mutexes
+      lock -> insert -> unlock
+
+      apply all locks -> then calculate entire list length
+      	    length of all lists in the arrays
+
+      hash is "%number of lists"
+

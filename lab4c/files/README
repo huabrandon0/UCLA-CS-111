@@ -1,0 +1,27 @@
+NAME: Brandon Hua
+EMAIL: huabrandon0@gmail.com
+ID: 804595738
+
+README for Project 4C
+
+lab4c_tcp.c:
+lab4c_tcp is the source code for the lab4c_tcp program. The program
+establishes a TCP connection with a server specified by command line
+arguments. It essentially runs the Project 4B program taking input from
+the server.
+
+lab4c_tls.c:
+lab4c_tls is the source code for the lab4c_tcp program. The program
+establishes an encrypted TLS connection with a server specified by
+command line arguments. It essentially runs the Project 4B program
+taking input from the server.
+
+Makefile:
+This is the Makefile of Project 4C. Supported targets include the
+following:
+	default: builds the lab4c_tcp and lab4c_tls programs
+	clean: removes all Makefile-generated files
+	dist: creates the deliverable tarball
+
+README:
+README describes the submission files.

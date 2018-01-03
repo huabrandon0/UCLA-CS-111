@@ -1,0 +1,291 @@
+
+<!-- saved from url=(0063)http://web.cs.ucla.edu/classes/spring17/cs111/projects/P4C.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Project 4C</title>
+<style></style></head>
+<body>
+<center>
+<h1>Project 4C<br>
+Internet Of Things Security</h1>
+</center>
+
+<h2>INTRODUCTION:</h2>
+<p>
+The Internet Of Things is populated with an ever expanding
+range of sensors and appliances.  Initially such devices
+were likely to be connected to monitoring and control 
+devices over purely local/personal networks 
+(e.g. infra-red, Bluetooth, ZigBee), but it is
+increasingly common to connect such devices 
+(directly or via a bridge) to the internet.
+This enables remote monitoring and control, but it also
+exposes them to a variety of remote attacks.
+</p>
+<p>
+For some targets (e.g. a national power grid or 
+Uranium separation centrifuges) their stratigic importance
+and need for protection should be clear.
+It might not be immediatly obvious how one might hijack simple
+devices (e.g. light switches or temperature/humidity sensors) 
+for nefarious purposes, but:
+</p><ul>
+   <li> there have been numerous instances where web-cams,
+   	have been hijacked to violate peoples' privacy.</li>
+   <li> smart devices like routers, baby-monitors, 
+   	washing machines, and even lightbulbs have been
+	conscripted into <em>bot-nets</em> to mount 
+	<em>Distributed Denial of Service</em>
+	attacks.</li>
+   <li> security researchers have been able to hijack the
+   	digital controls of recent cars.</li>
+   <li> consider the havoc that could be wrought by someone
+   	who was able to seize control of a networked
+	pace-maker or insulin pump.</li>
+</ul>
+Prudence suggests that all communications and control for 
+IOT devices should be encrypted.
+<p></p>
+<p>
+In this project we will extend your
+embedded temperature sensor to accept commands from, and send
+reports back to a network server.  You will do this over both
+unencrypted and encrypted channels.
+</p>
+
+<h2>RELATION TO READING AND LECTURES:</h2>
+<p>
+This project applies the principles discussed in the reading and lectures on
+Cryptography, Distributed Systems Security, and Secure Socket Layer encryption.
+</p>
+
+<h2>PROJECT OBJECTIVES:</h2>
+<ul>
+    <li> Primary: Demonstrate the ability to design, build and debug an 
+    	embedded application that interacts with a central control server
+	with the aid of server-side logs.</li>
+    <li> Primary: Demonstrate the ability to implement a secure channel
+    	using standard tools.</li>
+    <li> Primary: Demonstrate the ability to research and exploit
+    	a complex API, and to debug an application involving encrypted communication.</li>
+</ul>
+
+<h2>DELIVERABLES:</h2>
+A single compressed tarball (<tt>.tar.gz</tt>) containing:
+<ul>
+    <li> C source files for two embedded applications 
+	(<tt>lab4c_tcp</tt> and <tt>lab4c_tls</tt>)
+    	that build and run (with no errors or warnings) on an Edison.
+ <!--
+    <LI> a public key <tt>lab4c_server.crt</tt> that your device will use to authenticate
+    	the logging server.</li>
+    -->
+    </li><li> A <tt>Makefile</tt> to build and test your application.
+	 The higher level targets should include:
+	<ul>
+		<li>default ... build both versions your program</li>
+		<li><strong>clean</strong> ... delete all programs and output created by the Makefile</li>
+		<li><strong>dist</strong> ... create the deliverable tarball</li>
+	</ul></li>
+    	Note that this <tt>Makefile</tt> is intended to be executed on an Edison, but you
+	may find it convenient to create a <tt>Makefile</tt> that can be run on either an
+	Edison or a Linux server/desktop/notebook.
+    <li> a <tt>README</tt> file containing:
+	<ul>
+		<li> descriptions of each of the included files and any other information about your 
+			submission that you would like to bring to our attention 
+	 		(e.g. research, limitations, features, testing methodology).</li>
+		<li> any other comments on your submission 
+			(e.g. references consulted, slip days, etc.)</li>
+	</ul></li>
+</ul>
+
+<h2>PREPARATION:</h2>
+<p>
+</p><ul>
+   <li>Part 1 
+       <ul>
+       	    <li>Obtain the <a href="http://web.cs.ucla.edu/classes/spring17/cs111/projects/serverinfo.html">host name, port # and server status URL</a>
+		for the TCP logging server.</li>
+   	</ul>
+   </li>
+   <li>Part 2
+       <ul>
+       	    <li>Obtain the <a href="http://web.cs.ucla.edu/classes/spring17/cs111/projects/serverinfo.html">host name, port # and server status URL</a>
+       	    	for the TLS logging server.</li>
+	   <li>Review the documentation for the
+		<a href="https://www.openssl.org/docs/manmaster/man7/ssl.html">OpenSSL</a> 
+		SSL/TLS library, which should already be installed on your Edison.
+		You will likely want to seek out additional tutorials on using
+		OpenSSL to initiate connections and verify server certificates.
+	   </li>
+   	</ul>
+   </li>
+</ul>
+<p></p>
+
+<h2>PROJECT DESCRIPTION:</h2>
+<h3>Part 1: Communication with a Logging Server</h3>
+<p>
+Write a program (called <tt>lab4c_tcp</tt>) that:
+</p><ul>
+   <li> builds and runs on your Edison</li>
+   <li> is based on the temperature sensor application you built previously</li>
+   <li> accepts the following parameters:
+   	<ul>
+		<li><tt>--id=</tt><em>9-digit-number</em></li>
+		<li><tt>--host=</tt><em>name or address</em></li>
+		<li><tt>--log=</tt><em>filename</em></li>
+		<li>(required) <em>port number</em></li>
+	</ul>
+   	Note: that there is no <tt>--port=</tt> in front of the port number.
+	      This is non-switch parameter.
+   </li>
+   <li> It accepts the same commands and generates the same reports as the
+   	previous Edison project, but now the input and output are from/to
+	a network connection to a server.
+   	<ol type="1">
+		<li> open a TCP connection to the server at the specified address and port</li>
+		<li> immediately send (and log) an ID terminated with a newline:<br>
+			<strong><tt>ID=</tt></strong><em>ID-number</em>.  This new report
+			enables the server to keep track of which devices it has received 
+			reports from.
+		</li>
+		<li> send (and log) newline terminated temperature reports over the connection </li>
+		<li> process (newline terminated) commands reveived over the connection </li>
+		<li> the last command sent by the server will (as before) be <tt>OFF</tt></li>
+	</ol>
+   </li>
+   <li> as before, assume that the temperature sensor has been connected
+     	to Analog input 0.</li>
+</ul>
+The ID number will appear in the TCP server log
+(follow the
+<a href="http://web.cs.ucla.edu/classes/spring17/cs111/projects/serverinfo.html">TCP server URL</a>),
+and will permit you to find the reports for your sessions.  
+To protect your privacy, You do not have to use your student ID number, but merely
+a nine-digit number that you will recognize and that will be different from the
+numbers chosen by others.
+<p></p>
+<p>
+From the server status page, you will also be able to see, for each client,
+a log of all commands sent to and reports received from that client in the
+most recent session.
+</p>
+<p>
+To facilitate development and testing I wrote my program to, if compiled with a special 
+(<tt>-DDUMMY</tt>) define, include mock implementations for the <tt>mraa_aio_</tt> 
+functionality, enabling me to do most of my testing on my desktop.  
+I then modified my Makefile run the command "<tt>uname -r</tt>", check for the 
+presence of the string "<tt>edison</tt>" in that output, and if not found, build with a rule
+that passed the <tt>-DDUMMY</tt> flag to <em>gcc</em>.
+</p>
+<h3>Part 2: Authenticated TLS Session Encryption</h3>
+<p>
+Write a program (called <tt>lab4c_tls</tt>) that:
+</p><ul>
+   <li> builds and runs on your Edison</li>
+   <li> is based on the remote logging appliance build in part 1</li>
+ <!--
+   <li> accepts the following additional command line parameter:
+   	<ul>
+	<li><tt>--serverkey=</tt><em>key file</em> for server's public key</li>
+	</ul>
+   </li>
+ -->
+   <li> operates by:
+   	<ol type="1">
+		<li> opening a TLS connection to the server at the specified address and port.
+		     <!-- and authenticating the server against a supplied
+			     <a href="lab4c_server.crt">certificate</a>.
+		     If the server
+		     does not use the expected certificate, log an error (to both
+		     standard error and to the log), close the connection, and exit.-->
+		</li>
+		<li> sending your student ID followed by a newline </li>
+		<li> send temperature reports over the connection </li>
+		<li> process commands reveived over the connection </li>
+		<li> the last command sent by the server will be <tt>OFF</tt></li>
+	</ol>
+   </li>
+</ul>
+The ID number will appear in the TLS server log
+(follow the
+<a href="http://web.cs.ucla.edu/classes/spring17/cs111/projects/serverinfo.html">TLS server URL</a>),
+and will permit you to find the reports for your sessions.  
+<p></p>
+<p>
+Note that you may choose to:
+</p><ul>
+	<li>write two versions of the program</li>
+	<li>write a single program that can be compiled to produce two different executables</li>
+	<li>write a single executable that implements both functionalities, and chooses which
+	    based on the name by which it was invoked.  In this last case, your Makefile should 
+	    produce two different links (with the required names) to that program.
+	    </li>
+</ul>
+<p></p>
+
+<h2> SUMMARY OF EXIT CODES: </h2>
+<ul>
+	<li> 0: successful run</li>
+	<li> 1: invalid command-line parameters (e.g. unrecognized parameter, no such host)</li>
+	<li> 2: other run-time failures</li>
+</ul>
+
+<h2>SUBMISSION:</h2>
+<p>
+Your tarball should have a name of the form <tt>lab4c-</tt><em>studentID</em><tt>.tar.gz</tt>.
+You can sanity check your submission with this 
+<a href="http://web.cs.ucla.edu/classes/spring17/cs111/projects/P4C_check.sh">test script</a>
+which should run on your Edison or (if with appropriately dummied sensor access) on your usual Linux development environment.
+</p>
+<p>
+Note that the sanity checker works, in part, by checking the server logs for entries corresponding
+to the student ID you have given as a parameter.  Thus, in order to pass the sanity check, you must
+have had recent successful sessions using your own student ID number (or at least the same number
+you have used to name your submission tarball).
+</p>
+<p>
+Your <strong>README</strong> file (and all source files) must include lines of the form:
+</p><ul>
+	<strong>NAME:</strong> <em>your name</em><br>
+	<strong>EMAIL:</strong> <em>your email</em><br>
+	<strong>ID:</strong> <em>your student ID</em>
+</ul>
+<p></p>
+
+<h2>GRADING:</h2>
+<p>
+Points for this project will be awarded:
+</p>
+<div align="center">
+<table><tbody>
+<tr> <th>value</th>	<th align="left">feature</th></tr>
+
+<tr> <td></td>		<th align="left">Packaging and build (10% total)</th></tr>
+<tr> <td>3%</td>	<td>un-tars expected contents</td></tr>
+<tr> <td>3%</td>	<td>clean build of correct program w/default action (no warnings)</td></tr>
+<tr> <td>2%</td>	<td>Makefile has working <tt>clean</tt>, <tt>dist</tt> targets</td></tr>
+<tr> <td>2%</td>	<td>reasonableness of <tt>README</tt> contents</td></tr>
+
+<tr> <td></td> </tr>
+<tr> <td></td>		<th align="left">Unencrypted (50% total)</th></tr>
+<tr> <td>20%</td>	<td>establishes TCP session, and presents ID</td></tr>
+<tr> <td>10%</td>	<td>reports temperatures</td></tr>
+<tr> <td>10%</td>	<td>correct command processing</td></tr>
+<tr> <td>10%</td>	<td>command and data logging
+
+</td></tr><tr> <td></td> </tr>
+<tr> <td></td>		<th align="left">Encrypted Server Sessions (40% total)</th></tr>
+<tr> <td>20%</td>	<td>establishes TLS session, presents ID</td></tr>
+<!--
+<tr> <td>10%</td>	<td>correctly authenticates (or rejects) server</td></tr>
+-->
+<tr> <td>10%</td>	<td>reports temperatures</td></tr>
+<tr> <td>10%</td>	<td>correct command processing</td></tr>
+</tbody></table>
+</div>
+
+
+
+</body></html>

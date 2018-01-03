@@ -1,0 +1,31 @@
+NAME: Brandon Hua
+EMAIL: huabrandon0@gmail.com
+ID: 804595738
+README
+
+Serial number: FZEDA628D02218501
+Wifi MAC Address: 90:b6:86:10:2e:89
+
+selfie_edison.jpg:
+A picture of me holding my assembled Edison.
+
+ifconfig.png:
+A screen shot of the ifconfig output after configuring the Edison's Wifi.
+
+win_scp.png:
+A screen shot of the WinSCP copy dialog box that pops up after dragging and
+dropping the "Hello World" program code from my computer to the Edison.
+
+build_helloworld.png:
+A screen shot of the compilation and execution of the "Hello World" program,
+done in a Wifi SSH session.
+
+git_install_and_clone.png:
+A screen shot of the installation of git, a git-clone of an empty test
+repository, and a "ls" command output to show the directory had been
+successfully cloned. Note: git had already seemed to be installed on the
+Edison, possibly because I had ran the Edison installation wizard tool
+beforehand. 
+
+README:
+README describes the submission files/pictures.

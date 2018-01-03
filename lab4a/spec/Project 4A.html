@@ -1,0 +1,164 @@
+
+<!-- saved from url=(0063)http://web.cs.ucla.edu/classes/spring17/cs111/projects/P4A.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Project 4A</title>
+<style></style></head>
+<body>
+<center>
+<h1>Project 4A<br>
+Edison Bring-Up</h1>
+</center>
+
+<h2>INTRODUCTION:</h2>
+<p>
+The venerable Arduino, while fun and useful, is an old and weak system:
+</p><ul>
+   <li> Limited CPU power greatly restricted the possible processing.</li>
+   <li> Limited memory greatly restricted the type of software that could be run.</li>
+   <li> The available libraries were minimal, and mostly device related.</li>
+   <li> Development had to be done on another system, cross-compiled,
+   	and then up-loaded and flashed onto the Arduino.</li>
+</ul>
+<p></p>
+<p>
+The Edison is a much more powerful platform.
+It runs a full-blown Linux system:
+</p><ul>
+   <li> it hosts remote terminal access via both USB and WIFI.</li>
+   <li> it has a package manager that can be used to find and download software from the internet.</li>
+   <li> it can host its own complier and development tools.</li>
+</ul>
+Other than size and power, the biggest differences between an Edison and a desktop computer are:
+<ul>
+   <li> the Edison does not have a graphics adaptor or support graphical applications.</li>
+   <li> the Edison has a great many programmed I/O pins that can be used to interact with
+    	a wide range of sensors and actuators.</li>
+</ul>
+<p></p>
+<p>
+These things make it a very reasonable platform for both Embedded System, and Internet of Things projects.
+</p>
+
+<h2>RELATION TO READING AND LECTURES:</h2>
+<p>
+None.  
+All of this work is preliminary to embedded system software development.
+</p>
+
+<h2>PROJECT OBJECTIVES:</h2>
+<ul>
+    <li> ensure students have a working Edison.</li>
+    <li> ensure that students can log into their Edison via both USB and WIFI.</li>
+    <li> ensure that students have the ability to transfer files to/from their Edison.</li>
+    <li> ensure students have a working Edison development environment.</li>
+    <li> ensure students have the ability to install new packages on their Edison.</li>
+</ul>
+<p>
+This should be a simple matter of following simple steps.
+But if you do not have communication with a working Edison 
+development environment, you be unable to complete the
+remaining embedded systems projects.
+</p>
+
+<h2>DELIVERABLES:</h2>
+A single compressed tarball (<tt>.tar.gz</tt>) containing:
+<ul>
+    <li> a selfie of you holding your assembled Edison (showing the chip).</li>
+    <li> a screen shot from a USB terminal command session in connected to your system, gave it a name
+         and configured network access.</li>
+    <li> a screen shot from a local session in which you copy a hello world program from your laptop/desktop to your Edison.</li>
+    <li> a screen shot from a WIFI SSH session in which you build and run a trivial program.</li>
+    <li> a screen shot from a WIFI SSH session in which you install <em>git</em> and clone a reposoitory.</li>
+    <li> a README file containing the serial number and WiFi MAC (unless you are using a
+         hard-wired ethernet connnection) MAC address of your Edison and a description
+    	 of the above files.</li>
+</ul>
+
+<h2>PROJECT DESCRIPTION:</h2>
+<ol type="1">
+    <li> (if you have not already done so)
+    	Read the Intel
+	<a href="https://software.intel.com/en-us/intel-edison-board-user-guide">tutorials on setting up your Edison.</a>.
+    </li>
+    <li> Follow the
+        <a href="https://software.intel.com/en-us/assembling-intel-edison-board-with-arduino-expansion-board">
+	instructions</a> 
+	to assemble it, power it up and connect it (via USB) to your personal
+	notebook or desktop.</li>
+
+    <li> Follow the 
+    	<a href="http://software.intel.com/en-us/setting-up-serial-terminal-intel-edison-board">
+	instructions</a> 
+	to establish a USB terminal login session from your notebook/desktop to your Edison.</li>
+
+    <li>use the <tt>configure_edison --setup</tt> command to:
+	<ul>
+	   <li>	give your system a name.</li>
+	   <li>	create a root password.</li>
+	   <li>	enable and 
+    		<a href="https://software.intel.com/en-us/connecting-your-intel-edison-board-using-wifi">
+	   	configure WIFI access</a>.</li>
+	</ul>
+        Then run the <em>ifconfig</em> command to display the IP and MAC addresses,
+        and take a screen shot.</li>
+
+    <li> Log in to your Edison (over WIFI) via <em>ssh</em> (or <em>putty</em> or 
+         other equivalent tool).</li>
+
+    <li> On your notebook/laptop, write a trivial C "Hello World" program.
+	 Follow the
+	 <a href="https://software.intel.com/en-us/articles/intel-iot-platforms-file-transfer-for-linux-using-scp">
+         instructions</a> to use <em>scp(1)</em> to copy that program from your notebook/desktop
+         to your Edison (note: this is a <u>pull</u> from your notebook/desktop to the Edison).<br>
+	 Take a screen shot (on your desktop/laptop) of the successful copy command.</li>
+
+    <li> Use <em>ssh(1)</em> to connect (via WIFI) to your Edison, and compile and run 
+    	a simple C "Hello world." program.
+        Take a screen shot of the compilation, and execution.</li>
+
+    <li> Follow the
+         <a href="https://lasr.cs.ucla.edu/classes/edison_tutorials/opkg.pdf">
+	 instructions</a>
+	 to use the <strong>opkg</strong> package manager to install <em>git</em> and
+	 then use <em>git</em> to <tt>clone</tt> a local copy of a repository 
+	 (e.g. your own github repo).  
+	 Take a screen shot of the clone command and directory listing.</li>
+</ol>
+<p>
+Note that you will probably find it much easier to log in and copy files to your Edison if you
+set up <a href="https://help.ubuntu.com/community/SSH/OpenSSH/Keys">ssh keys</a>.
+</p>
+
+<h2>SUBMISSION:</h2>
+<p>
+Your tarball should have a name of the form <tt>lab4a-</tt><em>studentID</em><tt>.tar.gz</tt>.
+</p>
+<p>
+Your <strong>README</strong> file must include lines of the form:
+</p><ul>
+	<strong>NAME:</strong> <em>your name</em><br>
+	<strong>EMAIL:</strong> <em>your email</em><br>
+	<strong>ID:</strong> <em>your student ID</em>
+</ul>
+<p></p>
+
+<h2>GRADING:</h2>
+<p>
+Points for this project will be awarded:
+</p>
+<center>
+<table><tbody>
+<tr> <td><strong>Value</strong></td> <td><strong>Feature</strong></td> </tr>
+<tr> <td>5%</td> <td>untars expected contents</td> </tr>
+<tr> <td>5%</td> <td>obtain and assemble your own Edison </td> </tr>
+<tr> <td>10%</td> <td>successfully establish USB terminal session</td> </tr>
+<tr> <td>20%</td> <td>successfully establish <em>ssh</em> session</td> </tr>
+<tr> <td>20%</td> <td>successfully copy a file via scp/sftp protocol</td> </tr>
+<tr> <td>20%</td> <td>successful compilation and execution</td> </tr>
+<tr> <td>20%</td> <td>successful <em>git</em> install and <tt>clone</tt></td> </tr>
+</tbody></table>
+</center>
+
+
+
+</body></html>

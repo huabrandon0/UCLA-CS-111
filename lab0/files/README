@@ -1,0 +1,61 @@
+NAME: Brandon Hua
+EMAIL: huabrandon0@gmail.com
+ID: 804595738
+README
+
+lab0.c:
+lab0.c is the source code of the lab0 program. As stated in the Lab 0
+Specifications, it copies its standard input to its standard output by
+read(2)-ing from the file descriptor 0 and write(2)-ing to file descriptor 1.
+It accepts the following (optional) command line arguments:
+   -i filename, --input=filename
+      use the specified file as standard input
+   -o filename, --output=filename
+      use the specified file as standard output
+   -s, --segfault
+      force a segmentation fault
+   -c, --catch
+      catch the segmentation fault
+
+Makefile:
+Makefile is the makefile of the lab0 program. It supports the following
+targets:
+   default
+      build the lab0 executable
+   check
+      a smoke-test on the functionality of the program
+   clean
+      delete all makefile-created files
+   dist
+      build the distribution tarball
+
+backtrace.png:
+backtrace.png is a screenshot of the backtrace of lab0 ran with gdb using the
+--segfault option. The backtrace is from after the fault.
+
+breakpoint.png:
+breakpoint.png is the screenshot of the value of "ptr", which is 0x0 or NULL.
+"ptr" is the pointer used to cause the segmentation fault when the --segfault
+option is used.
+
+README:
+README describes the submission files and the smoke-test cases.
+
+Smoke-test cases:
+The smoke-test cases are the following (exit codes 0-4, 139):
+   testEC0_1
+      checks the case that there are no options used
+   testEC0_2
+      checks the case that the --input and --output options are used
+   testEC0_3
+      checks if the input file matches the output file using cmp
+   testEC1
+      checks the case that there is an unrecognized argument
+   testEC2
+      checks the case that it cannot open the input file
+   testEC3
+      checks the case that it cannot open the output file
+   testEC4
+      checks the case that the --segfault and --catch options are used
+   testEC139
+      checks the case that just the --segfault option is used
